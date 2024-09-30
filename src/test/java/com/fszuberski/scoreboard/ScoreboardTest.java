@@ -221,4 +221,30 @@ public class ScoreboardTest {
             verify(matchStoreMock, times(1)).updateMatch(eq(originalMatch.id()), eq(expectedUpdatedMatch));
         }
     }
+
+    @Nested
+    public class FinishMatch {
+
+        @Test
+        @DisplayName("should throw exception given null MatchId")
+        public void shouldThrowExceptionGivenNullMatchId() {
+            // when: finishMatch is invoked with a null matchId
+            Executable executable = () -> scoreboard.finishMatch(null);
+
+            // then: an IllegalArgumentException is thrown
+            var result = assertThrows(IllegalArgumentException.class, executable);
+            assertEquals("MatchId cannot be null.", result.getMessage());
+        }
+
+        @Test
+        @DisplayName("should remove Match from the MatchStore")
+        public void shouldRemoveMatchFromTheMatchStore() {
+            // when: finishMatch is invoked
+            var matchId = UUID.randomUUID();
+            scoreboard.finishMatch(matchId);
+
+            // then: the match is removed from the MatchStore
+            verify(matchStoreMock, times(1)).removeMatch(eq(matchId));
+        }
+    }
 }

@@ -74,6 +74,35 @@ public class ScoreboardIntegrationTest {
         }
     }
 
+    @Nested
+    public class FinishMatch {
+
+        @Test
+        @DisplayName("should finish existing matches")
+        public void shouldFinishExistingMatches() {
+            // given: multiple Matches are added to an empty Scoreboard
+            var mexicoCanadaMatchId = scoreboard.startMatch("Mexico", "Canada");
+            var spainBrazilMatchId = scoreboard.startMatch("Spain", "Brazil");
+            var germanyFranceMatchId = scoreboard.startMatch("Germany", "France");
+            var uruguayItalyMatchId = scoreboard.startMatch("Uruguay", "Italy");
+            var argentinaAustraliaMatchId = scoreboard.startMatch("Argentina", "Australia");
+
+            withInternalMapReference(scoreboard, matchMapBeforeRemoval ->
+                    assertEquals(5, matchMapBeforeRemoval.size()));
+
+            // when: existing Scoreboard Matches are finished
+            scoreboard.finishMatch(mexicoCanadaMatchId);
+            scoreboard.finishMatch(spainBrazilMatchId);
+            scoreboard.finishMatch(germanyFranceMatchId);
+            scoreboard.finishMatch(uruguayItalyMatchId);
+            scoreboard.finishMatch(argentinaAustraliaMatchId);
+
+            // then: the Scoreboard is empty
+            withInternalMapReference(scoreboard, matchMapAfterRemoval ->
+                    assertEquals(0, matchMapAfterRemoval.size()));
+        }
+    }
+
     private void verifyMatchState(UUID matchId, String homeTeamName, String awayTeamName, int homeTeamScore, int awayTeamScore) {
         withInternalMapReference(scoreboard, matchMap -> {
             var match = matchMap.get(matchId);

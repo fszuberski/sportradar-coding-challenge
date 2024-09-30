@@ -90,4 +90,16 @@ public class Scoreboard {
 
         matchStore.updateMatch(matchId, updatedMatch);
     }
+
+    /**
+     * Finishes an existing match. Has no effect if a match with the passed {@code matchId} is not found.
+     *
+     * @param matchId the id of the match that should be finished. Cannot be null.
+     */
+    public void finishMatch(UUID matchId) {
+        if (matchId == null) {
+            throw new IllegalArgumentException("MatchId cannot be null.");
+        }
+        matchStore.removeMatch(matchId);
+    }
 }
