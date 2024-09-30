@@ -46,6 +46,34 @@ public class ScoreboardIntegrationTest {
         }
     }
 
+    @Nested
+    public class UpdateMatchScore {
+
+        @Test
+        public void shouldUpdateExistingMatches() {
+            // given: multiple Matches are added to an empty Scoreboard
+            var mexicoCanadaMatchId = scoreboard.startMatch("Mexico", "Canada");
+            var spainBrazilMatchId = scoreboard.startMatch("Spain", "Brazil");
+            var germanyFranceMatchId = scoreboard.startMatch("Germany", "France");
+            var uruguayItalyMatchId = scoreboard.startMatch("Uruguay", "Italy");
+            var argentinaAustraliaMatchId = scoreboard.startMatch("Argentina", "Australia");
+
+            // when: Matches have their scores updated
+            scoreboard.updateMatchScore(mexicoCanadaMatchId, 0, 5);
+            scoreboard.updateMatchScore(spainBrazilMatchId, 10, 2);
+            scoreboard.updateMatchScore(germanyFranceMatchId, 2, 2);
+            scoreboard.updateMatchScore(uruguayItalyMatchId, 6, 6);
+            scoreboard.updateMatchScore(argentinaAustraliaMatchId, 3, 1);
+
+            // then: all Matches have their state properly set
+            verifyMatchState(mexicoCanadaMatchId, "Mexico", "Canada", 0, 5);
+            verifyMatchState(spainBrazilMatchId, "Spain", "Brazil", 10, 2);
+            verifyMatchState(germanyFranceMatchId, "Germany", "France", 2, 2);
+            verifyMatchState(uruguayItalyMatchId, "Uruguay", "Italy", 6, 6);
+            verifyMatchState(argentinaAustraliaMatchId, "Argentina", "Australia", 3, 1);
+        }
+    }
+
     private void verifyMatchState(UUID matchId, String homeTeamName, String awayTeamName, int homeTeamScore, int awayTeamScore) {
         withInternalMapReference(scoreboard, matchMap -> {
             var match = matchMap.get(matchId);

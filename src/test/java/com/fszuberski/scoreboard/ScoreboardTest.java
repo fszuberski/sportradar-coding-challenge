@@ -1,6 +1,7 @@
 package com.fszuberski.scoreboard;
 
 import com.fszuberski.scoreboard.domain.Match;
+import com.fszuberski.scoreboard.domain.TeamScore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -9,6 +10,10 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.ArgumentCaptor;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 import static com.fszuberski.scoreboard.TestUtils.withInternalMatchStoreReference;
 import static org.junit.jupiter.api.Assertions.*;
@@ -119,6 +124,101 @@ public class ScoreboardTest {
             // and: the new Match starts with the score of 0:0
             assertEquals(0, captor.getValue().homeTeamScore().score());
             assertEquals(0, captor.getValue().awayTeamScore().score());
+        }
+    }
+
+    @Nested
+    public class UpdateMatchScore {
+
+        @Test
+        @DisplayName("should throw exception given null MatchId")
+        public void shouldThrowExceptionGivenNullMatchId() {
+            // when: updateMatchScore is invoked with a null MatchId
+            Executable executable = () -> scoreboard.updateMatchScore(null, 0, 0);
+
+            // then: an IllegalArgumentException is thrown
+            var result = assertThrows(IllegalArgumentException.class, executable);
+            assertEquals("MatchId cannot be null.", result.getMessage());
+        }
+
+        @Test
+        @DisplayName("should throw exception given no Match is in progress with the passed MatchId")
+        public void shouldThrowExceptionGivenNoMatchIsInProgressWithThePassedMatchId() {
+            // given: a MatchId that doesn't exist in the MatchStore
+            var matchId = UUID.randomUUID();
+            when(matchStoreMock.getMatch(eq(matchId))).thenReturn(Optional.empty());
+
+            // when: updateMatchScore is invoked with the MatchId
+            Executable executable = () -> scoreboard.updateMatchScore(matchId, 0, 0);
+
+            // then: an IllegalArgumentException is thrown
+            var result = assertThrows(IllegalArgumentException.class, executable);
+            assertEquals(String.format("Match with id='%s' is not currently in progress.", matchId), result.getMessage());
+        }
+
+        @Test
+        @DisplayName("should throw exception given passed home team score is lower than the existing home team score")
+        public void shouldThrowExceptionGivenPassedHomeTeamScoreIsLowerThanTheExistingHomeTeamScore() {
+            // given: a Match exists in the MatchStore
+            var match = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Team1", 2),
+                    new TeamScore("Team2", 3),
+                    LocalDateTime.now()
+            );
+            when(matchStoreMock.getMatch(eq(match.id()))).thenReturn(Optional.of(match));
+
+            // when: updateMatchScore is invoked with the MatchId of the existing Match
+            Executable executable = () -> scoreboard.updateMatchScore(match.id(), 1, 3);
+
+            // then: an IllegalArgumentException is thrown
+            var result = assertThrows(IllegalArgumentException.class, executable);
+            assertEquals("New score cannot be lower than the previous score.", result.getMessage());
+        }
+
+        @Test
+        @DisplayName("should throw exception given passed away team score is lower than the existing away team score")
+        public void shouldThrowExceptionGivenPassedAwayTeamScoreIsLowerThanTheExistingAwayTeamScore() {
+            // given: a Match exists in the MatchStore
+            var match = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Team1", 2),
+                    new TeamScore("Team2", 3),
+                    LocalDateTime.now()
+            );
+            when(matchStoreMock.getMatch(eq(match.id()))).thenReturn(Optional.of(match));
+
+            // when: updateMatchScore is invoked with the MatchId of the existing Match
+            Executable executable = () -> scoreboard.updateMatchScore(match.id(), 2, 1);
+
+            // then: an IllegalArgumentException is thrown
+            var result = assertThrows(IllegalArgumentException.class, executable);
+            assertEquals("New score cannot be lower than the previous score.", result.getMessage());
+        }
+
+        @Test
+        @DisplayName("should update scores in the MatchStore")
+        public void shouldUpdateScoresInTheMatchStore() {
+            // given: a Match exists in the MatchStore
+            var originalMatch = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Team1", 2),
+                    new TeamScore("Team2", 3),
+                    LocalDateTime.now()
+            );
+            when(matchStoreMock.getMatch(eq(originalMatch.id()))).thenReturn(Optional.of(originalMatch));
+
+            // when: updateMatchScore is invoked with the MatchId of the existing Match
+            scoreboard.updateMatchScore(originalMatch.id(), 3, 5);
+
+            // then: the scores are updated in the MatchStore
+            var expectedUpdatedMatch = new Match(
+                    originalMatch.id(),
+                    new TeamScore(originalMatch.homeTeamScore().teamName(), 3),
+                    new TeamScore(originalMatch.awayTeamScore().teamName(), 5),
+                    originalMatch.startTime()
+            );
+            verify(matchStoreMock, times(1)).updateMatch(eq(originalMatch.id()), eq(expectedUpdatedMatch));
         }
     }
 }

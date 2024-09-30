@@ -52,4 +52,42 @@ public class Scoreboard {
         matchStore.saveMatch(match);
         return match.id();
     }
+
+    /**
+     * Updates the score of an existing match.
+     *
+     * @param matchId       the UUID of an existing match that should be updated. Cannot be null.
+     * @param homeTeamScore a new absolute value of the home team score. The new score cannot be lower than the previous score.
+     * @param awayTeamScore a new absolute value of the away team score. The new score cannot be lower than the previous score.
+     */
+    public void updateMatchScore(UUID matchId, int homeTeamScore, int awayTeamScore) {
+        if (matchId == null) {
+            throw new IllegalArgumentException("MatchId cannot be null.");
+        }
+
+        var matchOptional = matchStore.getMatch(matchId);
+
+        if (matchOptional.isEmpty()) {
+            throw new IllegalArgumentException(String.format("Match with id='%s' is not currently in progress.", matchId));
+        }
+
+        var match = matchOptional.get();
+        if (match.homeTeamScore().score() > homeTeamScore || match.awayTeamScore().score() > awayTeamScore) {
+            throw new IllegalArgumentException("New score cannot be lower than the previous score.");
+        }
+
+        // Creating a new Match object instead of mutating the existing object
+        var updatedMatch = new Match(
+                matchId,
+                new TeamScore(
+                        match.homeTeamScore().teamName(),
+                        homeTeamScore),
+                new TeamScore(
+                        match.awayTeamScore().teamName(),
+                        awayTeamScore),
+                match.startTime()
+        );
+
+        matchStore.updateMatch(matchId, updatedMatch);
+    }
 }
