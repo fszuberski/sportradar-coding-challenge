@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import static com.fszuberski.scoreboard.TestUtils.withInternalMapReference;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ScoreboardIntegrationTest {
 
@@ -100,6 +101,42 @@ public class ScoreboardIntegrationTest {
             // then: the Scoreboard is empty
             withInternalMapReference(scoreboard, matchMapAfterRemoval ->
                     assertEquals(0, matchMapAfterRemoval.size()));
+        }
+    }
+
+    @Nested
+    public class GetOngoingMatches {
+
+        @Test
+        @DisplayName("should return all matches ordered by their total score and start time")
+        public void shouldReturnAllMatchesOrderedByTheirTotalScoreAndStartTime() {
+            // given: multiple Matches are added to an empty Scoreboard
+            assumeTrue(scoreboard.getOngoingMatches().isEmpty());
+            var mexicoCanadaMatchId = scoreboard.startMatch("Mexico", "Canada");
+            var spainBrazilMatchId = scoreboard.startMatch("Spain", "Brazil");
+            var germanyFranceMatchId = scoreboard.startMatch("Germany", "France");
+            var uruguayItalyMatchId = scoreboard.startMatch("Uruguay", "Italy");
+            var argentinaAustraliaMatchId = scoreboard.startMatch("Argentina", "Australia");
+
+            // and: Matches have their scores updated
+            scoreboard.updateMatchScore(mexicoCanadaMatchId, 0, 5);
+            scoreboard.updateMatchScore(spainBrazilMatchId, 10, 2);
+            scoreboard.updateMatchScore(germanyFranceMatchId, 2, 2);
+            scoreboard.updateMatchScore(uruguayItalyMatchId, 6, 6);
+            scoreboard.updateMatchScore(argentinaAustraliaMatchId, 3, 1);
+
+            // when: all ongoing matches are retrieved from the Scoreboard
+            var result = scoreboard.getOngoingMatches();
+
+            // then: all matches are returned
+            assertEquals(5, result.size());
+
+            // and: all matches are ordered by their total score and start time
+            verifyMatchState(result.get(0).id(), "Uruguay", "Italy", 6, 6);
+            verifyMatchState(result.get(1).id(), "Spain", "Brazil", 10, 2);
+            verifyMatchState(result.get(2).id(), "Mexico", "Canada", 0, 5);
+            verifyMatchState(result.get(3).id(), "Argentina", "Australia", 3, 1);
+            verifyMatchState(result.get(4).id(), "Germany", "France", 2, 2);
         }
     }
 

@@ -3,7 +3,10 @@ package com.fszuberski.scoreboard;
 import com.fszuberski.scoreboard.domain.Match;
 import com.fszuberski.scoreboard.domain.TeamScore;
 
+import java.util.List;
 import java.util.UUID;
+
+import static com.fszuberski.scoreboard.Comparators.totalScoreAndStartTimeComparator;
 
 public class Scoreboard {
 
@@ -101,5 +104,19 @@ public class Scoreboard {
             throw new IllegalArgumentException("MatchId cannot be null.");
         }
         matchStore.removeMatch(matchId);
+    }
+
+    /**
+     * Returns a summary of matches in progress ordered by their total score. The matches with the
+     * same total score are returned ordered by the most recently started match in the scoreboard.
+     *
+     * @return a list of ongoing matches.
+     */
+    public List<Match> getOngoingMatches() {
+        return matchStore
+                .getAllMatches()
+                .stream()
+                .sorted(totalScoreAndStartTimeComparator.reversed())
+                .toList();
     }
 }

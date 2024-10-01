@@ -11,10 +11,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.ArgumentCaptor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.fszuberski.scoreboard.TestUtils.randomMatch;
 import static com.fszuberski.scoreboard.TestUtils.withInternalMatchStoreReference;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -245,6 +248,101 @@ public class ScoreboardTest {
 
             // then: the match is removed from the MatchStore
             verify(matchStoreMock, times(1)).removeMatch(eq(matchId));
+        }
+    }
+
+    @Nested
+    public class GetOngoingMatchSummary {
+
+        @Test
+        @DisplayName("should return empty list given MatchStore is empty")
+        public void shouldReturnEmptyListGivenMatchStoreIsEmpty() {
+            // given: the MatchStore is empty
+            when(matchStoreMock.getAllMatches()).thenReturn(List.of());
+
+            // when: getOngoingMatches is invoked
+            var result = scoreboard.getOngoingMatches();
+
+            // then: the returned list of Matches is empty
+            assertNotNull(result);
+            assertEquals(0, result.size());
+        }
+
+        @Test
+        @DisplayName("should return all Matches from the MatchStore")
+        public void shouldReturnAllMatchesFromTheMatchStore() {
+            // given: the MatchStore contains 3 Matches
+            var match1 = randomMatch();
+            var match2 = randomMatch();
+            var match3 = randomMatch();
+            var match4 = randomMatch();
+            when(matchStoreMock.getAllMatches()).thenReturn(List.of(match1, match2, match3));
+
+            // when: getOngoingMatches is invoked
+            var result = scoreboard.getOngoingMatches();
+
+            // then: the returned list contains all Matches from the MatchStore
+            assertTrue(result.contains(match1));
+            assertTrue(result.contains(match2));
+            assertTrue(result.contains(match3));
+            assertFalse(result.contains(match4));
+        }
+
+        @Test
+        @DisplayName("should return Matches ordered by their total score and start time")
+        public void shouldReturnMatchesOrderedByTheirTotalScoreAndStartTime() {
+            // given: the MatchStore contains multiple Matches
+            var now = LocalDateTime.now();
+            var mexicoCanadaMatch = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Mexico", 0),
+                    new TeamScore("Canada", 5),
+                    now.minus(Duration.ofMinutes(4))
+            );
+            var spainBrazilMatch = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Spain", 10),
+                    new TeamScore("Brazil", 2),
+                    now.minus(Duration.ofMinutes(3))
+            );
+            var germanyFranceMatch = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Germany", 2),
+                    new TeamScore("France", 2),
+                    now.minus(Duration.ofMinutes(2))
+            );
+            var uruguayItalyMatch = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Uruguay", 6),
+                    new TeamScore("Italy", 6),
+                    now.minus(Duration.ofMinutes(1))
+            );
+            var argentinaAustraliaMatch = new Match(
+                    UUID.randomUUID(),
+                    new TeamScore("Argentina", 3),
+                    new TeamScore("Australia", 1),
+                    now
+            );
+            when(matchStoreMock.getAllMatches()).thenReturn(List.of(
+                    mexicoCanadaMatch,
+                    spainBrazilMatch,
+                    germanyFranceMatch,
+                    uruguayItalyMatch,
+                    argentinaAustraliaMatch
+            ));
+
+            // when: getOngoingMatches is invoked
+            var result = scoreboard.getOngoingMatches();
+
+            // then: the returned list contains Matches ordered by their total score and start time
+            assertNotNull(result);
+            assertEquals(5, result.size());
+
+            assertEquals(uruguayItalyMatch, result.get(0));
+            assertEquals(spainBrazilMatch, result.get(1));
+            assertEquals(mexicoCanadaMatch, result.get(2));
+            assertEquals(argentinaAustraliaMatch, result.get(3));
+            assertEquals(germanyFranceMatch, result.get(4));
         }
     }
 }
